@@ -28,14 +28,14 @@ RUN apt-get update && \
 
 RUN apt-get -y install mysql-client pwgen python-setuptools curl git unzip apache2 php5 \
 		php5-gd libapache2-mod-php5 postfix wget supervisor php5-pgsql curl libcurl3 \
-		libcurl3-dev php5-curl php5-xmlrpc php5-intl php5-mysql git-core make
+		libcurl3-dev php5-curl php5-xmlrpc php5-intl php5-mysql git-core make \
+		default-jre default-jdk
 
 RUN cd /tmp && \
 	git clone -b MOODLE_27_STABLE git://git.moodle.org/moodle.git && \
 	mv /tmp/moodle/* /var/www/html/moodle/ && \
 	rm /var/www/html/index.html && \
-	chown -R www-data:www-data /var/www/html && \
-	chmod +x /etc/apache2/foreground.sh
+	chown -R www-data:www-data /var/www/html
 
 # SSH
 # RUN apt-get -y install openssh-server
@@ -47,6 +47,8 @@ RUN cd /tmp && \
 	git clone https://github.com/trampgeek/CodeRunner.git && \
 	mv /tmp/CodeRunner /var/www/html/moodle/local/
 
+ADD ./CodeRunner/type/coderunner/settings.php /var/www/html/moodle/local/CodeRunner/type/coderunner/settings.php
+ADD ./CodeRunner/install_runguard /var/www/html/moodle/local/CodeRunner/install_runguard
 RUN cd /var/www/html/moodle/local/CodeRunner && \
 	python install
 
@@ -54,6 +56,17 @@ RUN cd /var/www/html/moodle/question/type && \
 	chown -R www-data:www-data coderunner
 RUN cd /var/www/html/moodle/question/behaviour && \
 	chown -R www-data:www-data adaptive_adapted_for_coderunner
+
+
+RUN cd /var/www/html/moodle/local/CodeRunner && \
+	python install_runguard
+
+RUN chown root /var/www/html/moodle/question/type/coderunner/sandbox/runguard
+# all chgrp & chmod commands only after chown docker bug #6047
+RUN chgrp www-data /var/www/html/moodle/question/type/coderunner/sandbox/runguard
+RUN chmod 4750 /var/www/html/moodle/question/type/coderunner/sandbox/runguard
+RUN chmod 0700 /var/www/html/moodle/config.php
+RUN chmod +x /etc/apache2/foreground.sh
 
 CMD ["/etc/apache2/foreground.sh"]
 
